@@ -11,6 +11,25 @@ import util.HttpRequestUtils.Pair;
 
 public class HttpRequestUtilsTest {
 	@Test
+	public void getMethod() throws Exception {
+		assertThat(HttpRequestUtils.getMethod("GET /index.html"), is("GET"));
+		assertThat(HttpRequestUtils.getMethod("POST /index.html"), is("POST"));
+	}
+
+
+	@Test
+	public void getEndpoint() throws Exception {
+		assertThat(HttpRequestUtils.getEndpoint("GET /index.html "), is("/index.html"));
+		assertThat(HttpRequestUtils.getEndpoint("GET / "), is("/"));
+	}
+
+	@Test
+	public void getQueryString() throws Exception {
+		assertThat(HttpRequestUtils.getQueryString("/create?userId=javajigi"), is("userId=javajigi"));
+		assertThat(HttpRequestUtils.getQueryString("/create"), is(""));
+	}
+
+	@Test
 	public void parseQueryString() {
 		String queryString = "userId=javajigi";
 		Map<String, String> parameters = HttpRequestUtils.parseQueryString(queryString);
