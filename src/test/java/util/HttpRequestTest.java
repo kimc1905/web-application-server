@@ -1,13 +1,12 @@
 package util;
 
+import http.HttpMethod;
+import http.HttpRequest;
 import org.junit.Test;
-import util.HttpRequestUtils.Pair;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.util.Map;
-import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;

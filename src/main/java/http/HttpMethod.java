@@ -1,4 +1,4 @@
-package util;
+package http;
 
 /**
  * Created by Moonchan on 2016. 7. 4..

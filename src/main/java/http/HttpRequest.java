@@ -1,14 +1,15 @@
-package util;
+package http;
 
 import lombok.Getter;
 import lombok.ToString;
+import util.HttpRequestUtils;
+import util.IOUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Created by Moonchan on 2016. 7. 3..
