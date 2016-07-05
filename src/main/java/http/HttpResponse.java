@@ -59,7 +59,7 @@ public class HttpResponse {
      */
     public void forward(String contentType, String path) {
         try {
-            forward(contentType, Files.readAllBytes(Paths.get("webapp" + path)));
+            forwardBody(contentType, Files.readAllBytes(Paths.get("webapp" + path)));
         }catch(IOException e){
             log.debug("Forward : " + e.getMessage());
         }
@@ -69,16 +69,11 @@ public class HttpResponse {
      * 동적페이지 포워딩 (text/html)
      * @param body
      */
-    public void forward(byte[] body) {
-        forward("text/html", body);
+    public void forwardBody(byte[] body) {
+        forwardBody("text/html", body);
     }
 
-    /**
-     * 동적페이지 포워딩
-     * @param contentType
-     * @param body
-     */
-    public void forward(String contentType, byte[] body) {
+    private void forwardBody(String contentType, byte[] body) {
         try {
             writeStatusLine("200", "OK");
             create200Header(dataOutputStream, contentType, body.length);
