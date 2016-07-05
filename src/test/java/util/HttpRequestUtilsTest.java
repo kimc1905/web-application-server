@@ -10,6 +10,7 @@ import org.junit.Test;
 import util.HttpRequestUtils.Pair;
 
 public class HttpRequestUtilsTest {
+
 	@Test
 	public void getMethod() throws Exception {
 		assertThat(HttpRequestUtils.getMethod("GET /index.html"), is("GET"));

@@ -1,9 +1,12 @@
 package util;
 
 import lombok.Getter;
-import lombok.Setter;
 import lombok.ToString;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Map;
 import java.util.Optional;
 
@@ -16,63 +19,85 @@ public class HttpRequest {
 
     @Getter
     private HttpMethod method;
-    private String endPoint;
     @Getter
-    private String version;
+    private String path;
     @Getter
+    private String protocol;
     private Map<String, String> headers;
-    @Getter
-    private Optional<Map<String, String>> cookies;
-    @Getter
-    @Setter
-    private Optional<String> body;
+    private Map<String, String> parameters;
+    private Map<String, String> cookies;
+    private String body;
 
-    public HttpRequest (String request) {
-        int index = request.indexOf("\r\n");
-        if(index > 0){
-            String[] firstLine = request.substring(0, index).split(" ");
-            method = HttpMethod.valueOf(firstLine[0]);
-            endPoint = firstLine[1];
-            version = firstLine[2];
-            headers = HttpRequestUtils.parseHeaders(request.substring(index).trim());
-            cookies = headers.get("Cookie") == null ?
-                    Optional.empty() :
-                    Optional.of(HttpRequestUtils.parseCookies(headers.get("Cookie")));
+    public HttpRequest (InputStream in) {
+        try {
+            BufferedReader br = new BufferedReader(new InputStreamReader(in, "UTF-8"));
+            String request = IOUtils.readHeader(br);
 
+            int index = request.indexOf("\r\n");
+            if (index > 0) {
+                String[] requestLine = request.substring(0, index).split(" ");
+                method = HttpMethod.valueOf(requestLine[0]);
+                path = requestLine[1];
+                protocol = requestLine[2];
+                headers = HttpRequestUtils.parseHeaders(request.substring(index).trim());
+                cookies = HttpRequestUtils.parseCookies(headers.get("Cookie"));
+            }
+            parseBody(br);
+
+            switch(method){
+                case GET:
+                    parseParametersFromGetMethod();
+                    break;
+                case POST:
+                    parseParametersFromPostMethod();
+                    break;
+            }
+
+        }catch (IOException e){
+            e.printStackTrace();
         }
-        body = Optional.empty();
     }
 
-    public String getEndPoint() {
-        int index = endPoint.indexOf("?");
-        if(index >= 0)
-            return endPoint.substring(0, index);
-        else
-            return endPoint;
+    private void parseBody(BufferedReader br) {
+        String length = getHeader("Content-Length");
+        if (!length.isEmpty())
+            try {
+                body = IOUtils.readData(br, Integer.parseInt(length.trim()));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
     }
 
-    public String getEndPointWithParameter(){
-        return endPoint;
+    private void parseParametersFromGetMethod() {
+        String[] query = path.split("\\?");
+        if(query.length == 2){
+            path = query[0];
+            parameters = HttpRequestUtils.parseQueryString(query[1]);
+        }
     }
 
-    public enum HttpMethod {
-        GET("Get"), POST("Post"), DELETE("Delete"), PUT("Put");
+    private void parseParametersFromPostMethod() {
+        if(!body.isEmpty())
+            parameters = HttpRequestUtils.parseQueryString(body);
+    }
 
-        private String method;
+    public String getHeader(String key) {
+        if(headers == null)
+            return "";
+        return headers.getOrDefault(key, "");
+    }
 
-        HttpMethod(String get) {
-            this.method = method;
-        }
+    public String getParameter(String key){
+        if(parameters == null)
+            return "";
+        return parameters.getOrDefault(key, "");
 
-        public String getValue(){
-            return method;
-        }
+    }
 
-        public static HttpMethod getEnum(String value) {
-            for(HttpMethod v : values())
-                if(v.getValue().equalsIgnoreCase(value)) return v;
-            throw new IllegalArgumentException();
-        }
+    public String getCookie(String key){
+        if(cookies == null)
+            return "";
+        return cookies.getOrDefault(key, "");
     }
 }
 
