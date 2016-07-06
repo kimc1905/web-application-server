@@ -1,6 +1,6 @@
 package http;
 
-import lombok.Getter;
+import com.google.common.collect.Maps;
 import lombok.ToString;
 import util.HttpRequestUtils;
 import util.IOUtils;
@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Created by Moonchan on 2016. 7. 3..
@@ -18,85 +19,92 @@ import java.util.Map;
 @ToString
 public class HttpRequest {
 
-    @Getter
-    private HttpMethod method;
-    @Getter
-    private String path;
-    @Getter
-    private String protocol;
+    private RequestLine requestLine;
     private Map<String, String> headers;
     private Map<String, String> parameters;
     private Map<String, String> cookies;
-    private String body;
+    private Optional<String> body;
 
-    public HttpRequest (InputStream in) {
+    public HttpRequest(InputStream in) {
         try {
             BufferedReader br = new BufferedReader(new InputStreamReader(in, "UTF-8"));
-            String request = IOUtils.readHeader(br);
+            String requestLineStr = br.readLine();
+            String headerStr = IOUtils.readHeader(br);
 
-            int index = request.indexOf("\r\n");
-            if (index > 0) {
-                String[] requestLine = request.substring(0, index).split(" ");
-                method = HttpMethod.valueOf(requestLine[0]);
-                path = requestLine[1];
-                protocol = requestLine[2];
-                headers = HttpRequestUtils.parseHeaders(request.substring(index).trim());
-                cookies = HttpRequestUtils.parseCookies(headers.get("Cookie"));
-            }
-            parseBody(br);
+            requestLine = new RequestLine(requestLineStr);
+            headers = HttpRequestUtils.parseHeaders(headerStr.trim());
+            cookies = HttpRequestUtils.parseCookies(headers.get("Cookie"));
+            body = readBody(br);
+            parameters = parseParameter(requestLine.getPath());
 
-            switch(method){
-                case GET:
-                    parseParametersFromGetMethod();
-                    break;
-                case POST:
-                    parseParametersFromPostMethod();
-                    break;
-            }
-
-        }catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void parseBody(BufferedReader br) {
+    private Map<String, String> parseParameter(String path) {
+        switch (requestLine.getMethod()) {
+            case GET:
+                return parseParametersAsGetMethod(path);
+            case POST:
+                return parseParametersAsPostMethod();
+        }
+        return Maps.newHashMap();
+    }
+
+    private Map<String, String> parseParametersAsGetMethod(String path) {
+        String[] query = path.split("\\?");
+        if (query.length == 2) {
+            requestLine.setPath(query[0]);
+            return HttpRequestUtils.parseQueryString(query[1]);
+        }
+        return Maps.newHashMap();
+    }
+
+    private Map<String, String> parseParametersAsPostMethod() {
+        if(body.isPresent())
+            return HttpRequestUtils.parseQueryString(body.get());
+        return Maps.newHashMap();
+    }
+
+    private Optional<String> readBody(BufferedReader br) {
         String length = getHeader("Content-Length");
         if (!length.isEmpty())
             try {
-                body = IOUtils.readData(br, Integer.parseInt(length.trim()));
+                return Optional.of(IOUtils.readData(br, Integer.parseInt(length.trim())));
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        return Optional.empty();
     }
 
-    private void parseParametersFromGetMethod() {
-        String[] query = path.split("\\?");
-        if(query.length == 2){
-            path = query[0];
-            parameters = HttpRequestUtils.parseQueryString(query[1]);
-        }
+    public String getPath(){
+        return requestLine.getPath();
     }
 
-    private void parseParametersFromPostMethod() {
-        if(!body.isEmpty())
-            parameters = HttpRequestUtils.parseQueryString(body);
+    public HttpMethod getMethod(){
+        return requestLine.getMethod();
+    }
+
+    public String getProtocol(){
+        return requestLine.getProtocol();
     }
 
     public String getHeader(String key) {
-        if(headers == null)
+        if (headers == null)
             return "";
         return headers.getOrDefault(key, "");
     }
 
-    public String getParameter(String key){
-        if(parameters == null)
+    public String getParameter(String key) {
+        if (parameters == null)
             return "";
         return parameters.getOrDefault(key, "");
 
     }
 
-    public String getCookie(String key){
-        if(cookies == null)
+    public String getCookie(String key) {
+        if (cookies == null)
             return "";
         return cookies.getOrDefault(key, "");
     }
